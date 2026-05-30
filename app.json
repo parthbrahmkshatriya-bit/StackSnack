@@ -52,7 +52,16 @@
           "imageWidth": 200
         }
       ],
-      "react-native-iap"
+      "react-native-iap",
+      "./plugins/withKotlinCompilerArgs.js",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "kotlinVersion": "2.0.20"
+          }
+        }
+      ]
     ],
     "extra": {
       "eas": {
