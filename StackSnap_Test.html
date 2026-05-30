@@ -136,9 +136,10 @@ const PIECES=[
   {cells:[[0,0],[0,1],[1,1],[2,1]],color:'#3498DB',name:'J'},
 ];
 
-// Drop interval per level (ms)
-const SPEEDS=[900,800,700,600,500,420,340,260,180,100];
+// Drop interval per level (ms) — starts faster, ramps up quickly
+const SPEEDS=[700,580,470,380,300,230,170,120,80,50];
 const SCORE_TABLE=[0,100,300,500,800]; // lines → score (×level+1)
+const LINES_PER_LEVEL=5; // level up every 5 lines (was 10)
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // STATE
@@ -223,7 +224,7 @@ function checkLines(){
     if(comboCount>1)pts=Math.floor(pts*1.5);
     score+=pts;
     totalLines+=n;
-    level=Math.floor(totalLines/10);
+    level=Math.min(Math.floor(totalLines/LINES_PER_LEVEL),SPEEDS.length-1);
     full.sort((a,b)=>b-a).forEach(r=>{
       board.splice(r,1);
       board.unshift(Array(COLS).fill(null));

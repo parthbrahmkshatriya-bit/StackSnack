@@ -51,7 +51,8 @@
           "image": "./assets/splash.png",
           "imageWidth": 200
         }
-      ]
+      ],
+      "react-native-iap"
     ],
     "extra": {
       "eas": {

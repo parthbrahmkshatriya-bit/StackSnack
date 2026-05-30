@@ -17,7 +17,6 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated';
 import { markFirstRunDone } from '../utils/storage';
-import { logEvent, Events } from '../utils/analytics';
 
 export default function TutorialOverlay({ visible, onDismiss }) {
   const tapOpacity = useSharedValue(1);
@@ -44,7 +43,6 @@ export default function TutorialOverlay({ visible, onDismiss }) {
 
   const handleDismiss = async () => {
     await markFirstRunDone();
-    logEvent(Events.TUTORIAL_COMPLETED);
     onDismiss();
   };
 

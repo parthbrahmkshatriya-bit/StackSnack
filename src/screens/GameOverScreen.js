@@ -35,7 +35,6 @@ import {
   RewardedAdEventType,
   AdEventType,
 } from 'react-native-google-mobile-ads';
-
 import {
   getHighScore,
   saveHighScore,
@@ -47,7 +46,6 @@ import { INTERSTITIAL_FREQUENCY, MAX_REWARDED_CONTINUES } from '../constants/gam
 import { logEvent, Events } from '../utils/analytics';
 import { THEMES } from '../constants/themes';
 
-// Pre-create ad instances at module level (survives re-renders)
 const interstitial = InterstitialAd.createForAdRequest(AD_UNIT_IDS.INTERSTITIAL, {
   requestNonPersonalizedAdsOnly: false,
 });

@@ -91,7 +91,7 @@ export default function HomeScreen({ navigation }) {
         ))}
       </View>
 
-      {/* Banner ad — bottom, only on home screen */}
+      {/* Banner ad */}
       <View style={styles.adContainer}>
         <BannerAd
           unitId={AD_UNIT_IDS.BANNER}
