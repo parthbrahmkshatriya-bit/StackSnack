@@ -1,0 +1,63 @@
+{
+  "expo": {
+    "name": "Stack & Snap",
+    "slug": "stacksnap",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#1A1A2E"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.stacksnap.app",
+      "buildNumber": "1",
+      "infoPlist": {
+        "SKAdNetworkItems": [
+          {
+            "SKAdNetworkIdentifier": "cstr6suwn9.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "4fzdc2evr5.skadnetwork"
+          }
+        ],
+        "NSUserTrackingUsageDescription": "This allows us to show you relevant ads and keep the game free."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#1A1A2E"
+      },
+      "package": "com.stacksnap.app",
+      "versionCode": 1,
+      "permissions": []
+    },
+    "plugins": [
+      [
+        "./plugins/withAdMob.js",
+        {
+          "androidAppId": "ca-app-pub-3940256099942544~3347511713",
+          "iosAppId": "ca-app-pub-3940256099942544~1458002511"
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#1A1A2E",
+          "image": "./assets/splash.png",
+          "imageWidth": 200
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "3fda11c6-de15-4b7f-8087-8079b3b97b55"
+      }
+    },
+    "owner": "parth1983"
+  }
+}
