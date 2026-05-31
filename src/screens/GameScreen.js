@@ -22,6 +22,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
 import { STORAGE_KEYS } from '../constants/game';
 import { THEMES } from '../constants/themes';
+import { useSound } from '../hooks/useSound';
 
 // ─── Board dimensions ─────────────────────────────────────────────────────────
 const COLS = 10;
@@ -84,6 +85,7 @@ export default function GameScreen({ navigation, route }) {
   const { theme: themeId = 'theme_default' } = route.params || {};
   const theme = THEMES[themeId] || THEMES.theme_default;
   const insets = useSafeAreaInsets();
+  const { play, playBGM, stopBGM } = useSound();
 
   // Single ref for ALL mutable game state — no stale-closure problems
   const G = useRef({
@@ -152,6 +154,7 @@ export default function GameScreen({ navigation, route }) {
       // Flash cleared rows white for 300ms
       g.flashRows = full;
       g.combo++;
+      play('perfect'); // Play line clear chime!
       redraw();
       g.flashTimer = setTimeout(() => {
         const n = full.length;
@@ -178,6 +181,8 @@ export default function GameScreen({ navigation, route }) {
       // Check game over: new piece spawns into occupied space
       if (!isValid(g.cur.cells, g.cur.x, g.cur.y, g.board)) {
         g.gameOver = true;
+        stopBGM(); // Stop background music!
+        play('fail'); // Play game over sound!
         redraw();
         // Save best score
         if (g.score > g.bestScore) {
@@ -207,7 +212,9 @@ export default function GameScreen({ navigation, route }) {
       const g = G.current;
       if (g.gameOver || g.paused || g.flashRows.length) return;
       if (isValid(g.cur.cells, g.cur.x - 1, g.cur.y, g.board)) {
-        g.cur.x--; redraw();
+        g.cur.x--;
+        play('drag'); // Play drag sound!
+        redraw();
       }
     },
 
@@ -215,7 +222,9 @@ export default function GameScreen({ navigation, route }) {
       const g = G.current;
       if (g.gameOver || g.paused || g.flashRows.length) return;
       if (isValid(g.cur.cells, g.cur.x + 1, g.cur.y, g.board)) {
-        g.cur.x++; redraw();
+        g.cur.x++;
+        play('drag'); // Play drag sound!
+        redraw();
       }
     },
 
@@ -227,6 +236,7 @@ export default function GameScreen({ navigation, route }) {
         if (isValid(r, g.cur.x + kick, g.cur.y, g.board)) {
           g.cur.cells = r;
           g.cur.x += kick;
+          play('tap'); // Play rotate sound!
           redraw();
           return;
         }
@@ -256,10 +266,12 @@ export default function GameScreen({ navigation, route }) {
       .catch(() => {});
 
     L.current.scheduleDrop();
+    playBGM(); // Start background music!
 
     return () => {
       clearTimeout(G.current.dropTimer);
       clearTimeout(G.current.flashTimer);
+      stopBGM(); // Stop background music!
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -338,11 +350,13 @@ export default function GameScreen({ navigation, route }) {
     setIsPaused(g.paused);
     if (!g.paused) {
       L.current.scheduleDrop();
+      playBGM(); // Resume background music!
       redraw();
     } else {
       clearTimeout(g.dropTimer);
+      stopBGM(); // Pause background music!
     }
-  }, []);
+  }, [playBGM, stopBGM, redraw]);
 
   // ─── Build display board (board + ghost + active piece + flash) ───────────
   const { displayBoard, nxtDisplay } = useMemo(() => {

@@ -13,14 +13,16 @@ import { Audio } from 'expo-av';
 import { getSoundOn } from '../utils/storage';
 
 const SOUND_FILES = {
-  tap: require('../../assets/sounds/tap.mp3'),
-  perfect: require('../../assets/sounds/perfect.mp3'),
-  trim: require('../../assets/sounds/trim.mp3'),
-  combo: require('../../assets/sounds/combo.mp3'),
-  fail: require('../../assets/sounds/fail.mp3'),
-  highscore: require('../../assets/sounds/highscore.mp3'),
-  purchase: require('../../assets/sounds/purchase.mp3'),
-  startup: require('../../assets/sounds/startup.mp3'),
+  tap: require('../../assets/sounds/tap.wav'),
+  perfect: require('../../assets/sounds/perfect.wav'),
+  trim: require('../../assets/sounds/trim.wav'),
+  combo: require('../../assets/sounds/combo.wav'),
+  fail: require('../../assets/sounds/fail.wav'),
+  highscore: require('../../assets/sounds/highscore.wav'),
+  purchase: require('../../assets/sounds/purchase.wav'),
+  startup: require('../../assets/sounds/startup.wav'),
+  drag: require('../../assets/sounds/drag.wav'),
+  bgm: require('../../assets/sounds/bgm.mp3'),
 };
 
 export function useSound() {
@@ -42,7 +44,8 @@ export function useSound() {
         try {
           const { sound } = await Audio.Sound.createAsync(file, {
             shouldPlay: false,
-            volume: 1.0,
+            volume: name === 'bgm' ? 0.35 : 1.0, // Mute background music slightly so sfx pop!
+            isLooping: name === 'bgm', // Loop background music!
           });
           if (mounted) sounds.current[name] = sound;
         } catch (e) {
@@ -72,9 +75,33 @@ export function useSound() {
     }
   }, []);
 
-  const setSoundEnabled = useCallback((enabled) => {
-    soundOn.current = enabled;
+  const playBGM = useCallback(async () => {
+    if (!soundOn.current) return;
+    const sound = sounds.current.bgm;
+    if (!sound) return;
+    try {
+      await sound.playAsync();
+    } catch {
+      // Ignore BGM play errors
+    }
   }, []);
 
-  return { play, setSoundEnabled };
+  const stopBGM = useCallback(async () => {
+    const sound = sounds.current.bgm;
+    if (!sound) return;
+    try {
+      await sound.stopAsync();
+    } catch {
+      // Ignore BGM stop errors
+    }
+  }, []);
+
+  const setSoundEnabled = useCallback((enabled) => {
+    soundOn.current = enabled;
+    if (!enabled) {
+      stopBGM();
+    }
+  }, [stopBGM]);
+
+  return { play, playBGM, stopBGM, setSoundEnabled };
 }
