@@ -15,6 +15,7 @@ import {
   StyleSheet,
   StatusBar,
   Dimensions,
+  PanResponder,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -263,39 +264,72 @@ export default function GameScreen({ navigation, route }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ─── DAS (Delayed Auto Shift) for hold-to-repeat ──────────────────────────
-  const leftHoldRef = useRef(null);
-  const leftRepeatRef = useRef(null);
-  const rightHoldRef = useRef(null);
-  const rightRepeatRef = useRef(null);
+  // ─── Gesture Control Setup ────────────────────────────────────────────────
+  const gestureStateRef = useRef({
+    startX: 0,
+    startY: 0,
+    lastDx: 0,
+    lastDy: 0,
+    startTime: 0,
+  });
 
-  const startHold = useCallback((dir) => {
-    const fn = () => dir === 'L' ? L.current.moveLeft() : L.current.moveRight();
-    fn();
-    if (dir === 'L') {
-      clearTimeout(leftHoldRef.current);
-      clearInterval(leftRepeatRef.current);
-      leftHoldRef.current = setTimeout(() => {
-        leftRepeatRef.current = setInterval(fn, 80);
-      }, 200);
-    } else {
-      clearTimeout(rightHoldRef.current);
-      clearInterval(rightRepeatRef.current);
-      rightHoldRef.current = setTimeout(() => {
-        rightRepeatRef.current = setInterval(fn, 80);
-      }, 200);
-    }
-  }, []);
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderGrant: (evt, gestureState) => {
+        gestureStateRef.current = {
+          startX: gestureState.x0,
+          startY: gestureState.y0,
+          lastDx: 0,
+          lastDy: 0,
+          startTime: Date.now(),
+        };
+      },
+      onPanResponderMove: (evt, gestureState) => {
+        const state = gestureStateRef.current;
+        const dx = gestureState.dx;
+        const dy = gestureState.dy;
 
-  const stopHold = useCallback((dir) => {
-    if (dir === 'L') {
-      clearTimeout(leftHoldRef.current);
-      clearInterval(leftRepeatRef.current);
-    } else {
-      clearTimeout(rightHoldRef.current);
-      clearInterval(rightRepeatRef.current);
-    }
-  }, []);
+        // 1. Horizontal dragging (Continuous shifting)
+        // Shift piece by one column for every 28px of horizontal drag
+        const deltaX = dx - state.lastDx;
+        const thresholdX = 28;
+        if (deltaX > thresholdX) {
+          L.current.moveRight();
+          state.lastDx += thresholdX;
+        } else if (deltaX < -thresholdX) {
+          L.current.moveLeft();
+          state.lastDx -= thresholdX;
+        }
+
+        // 2. Vertical dragging (Soft drop)
+        // Soft drop piece by one row for every 20px of downward drag
+        const deltaY = dy - state.lastDy;
+        const thresholdY = 20;
+        if (deltaY > thresholdY) {
+          L.current.softDrop();
+          state.lastDy += thresholdY;
+        }
+      },
+      onPanResponderRelease: (evt, gestureState) => {
+        const state = gestureStateRef.current;
+        const elapsed = Date.now() - state.startTime;
+        const distance = Math.sqrt(gestureState.dx * gestureState.dx + gestureState.dy * gestureState.dy);
+
+        // A minimal move and short press is a Rotate Tap
+        if (elapsed < 250 && distance < 12) {
+          L.current.rotate();
+        } else {
+          // Check for a fast downward flick (Hard Drop)
+          // Thresholds: flicked down at least 80px, with downward velocity vy > 0.4
+          if (gestureState.dy > 80 && gestureState.vy > 0.4) {
+            L.current.hardDrop();
+          }
+        }
+      },
+    })
+  ).current;
 
   const togglePause = useCallback(() => {
     const g = G.current;
@@ -382,7 +416,7 @@ export default function GameScreen({ navigation, route }) {
       </View>
 
       {/* ── Board + Side panel ───────────────────────────────────────────── */}
-      <View style={styles.gameRow}>
+      <View style={styles.gameRow} {...panResponder.panHandlers}>
         {/* Main 10×20 board */}
         <View
           style={[
@@ -448,41 +482,16 @@ export default function GameScreen({ navigation, route }) {
         </View>
       </View>
 
-      {/* ── Controls ─────────────────────────────────────────────────────── */}
-      <View style={[styles.controls, { paddingBottom: Math.max(insets.bottom, 8) }]}>
-        <TouchableOpacity
-          style={styles.ctrlBtn}
-          onPressIn={() => startHold('L')}
-          onPressOut={() => stopHold('L')}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.ctrlIcon}>◀</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.ctrlBtn}
-          onPress={() => L.current.rotate()}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.ctrlIcon}>↻</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.ctrlBtn}
-          onPressIn={() => startHold('R')}
-          onPressOut={() => stopHold('R')}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.ctrlIcon}>▶</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.ctrlBtn, styles.ctrlDrop]}
-          onPress={() => L.current.hardDrop()}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.ctrlIcon}>▼▼</Text>
-        </TouchableOpacity>
+      {/* ── Gesture Legend ──────────────────────────────────────────────── */}
+      <View style={[styles.legendContainer, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+        <Text style={styles.legendText}>
+          ◀ Swipe Left / Right to Move ▶
+        </Text>
+        <View style={styles.legendRow}>
+          <Text style={styles.legendSubText}>Tap to Rotate</Text>
+          <Text style={styles.legendDot}>•</Text>
+          <Text style={styles.legendSubText}>Flick Down to Drop</Text>
+        </View>
       </View>
 
       {/* ── Pause overlay ─────────────────────────────────────────────────── */}
@@ -556,26 +565,34 @@ const styles = StyleSheet.create({
   },
   sideStatVal: { color: '#fff', fontSize: 14, fontWeight: '700' },
 
-  controls: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
+  legendContainer: {
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingTop: 8,
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 16,
     height: 90,
   },
-  ctrlBtn: {
-    width: 72,
-    height: 60,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
+  legendText: {
+    color: 'rgba(255, 255, 255, 0.65)',
+    fontSize: 14,
+    fontWeight: '600',
+    letterSpacing: 0.5,
+    marginBottom: 4,
   },
-  ctrlDrop: { backgroundColor: 'rgba(52,152,219,0.25)' },
-  ctrlIcon: { color: '#fff', fontSize: 22, fontWeight: '700' },
+  legendRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  legendSubText: {
+    color: 'rgba(255, 255, 255, 0.4)',
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  legendDot: {
+    color: 'rgba(255, 255, 255, 0.2)',
+    fontSize: 12,
+    marginHorizontal: 8,
+  },
 
   pauseOverlay: {
     ...StyleSheet.absoluteFillObject,
