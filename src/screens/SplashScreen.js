@@ -20,12 +20,18 @@ export default function SplashScreen({ navigation }) {
     // Small delay so useSound hook has time to load the audio file
     const soundTimer = setTimeout(() => play('startup'), 300);
 
-    // Fade in over 0.8s, then navigate at 1.5s total
-    opacity.value = withTiming(1, { duration: 800 }, () => {
-      setTimeout(() => runOnJS(navigate)(), 700);
-    });
+    // Fade in over 0.8s
+    opacity.value = withTiming(1, { duration: 800 });
 
-    return () => clearTimeout(soundTimer);
+    // Navigate at 1.5s total (0.8s fade + 0.7s delay)
+    const navTimer = setTimeout(() => {
+      navigate();
+    }, 1500);
+
+    return () => {
+      clearTimeout(soundTimer);
+      clearTimeout(navTimer);
+    };
   }, []);
 
   return (
