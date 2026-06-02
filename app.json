@@ -54,11 +54,15 @@
       ],
       "react-native-iap",
       "./plugins/withKotlinCompilerArgs.js",
+      "./plugins/withPlayStoreCompliance.js",
       [
         "expo-build-properties",
         {
           "android": {
-            "kotlinVersion": "2.0.20"
+            "kotlinVersion": "2.0.20",
+            "compileSdkVersion": 35,
+            "targetSdkVersion": 35,
+            "buildToolsVersion": "35.0.0"
           }
         }
       ]
