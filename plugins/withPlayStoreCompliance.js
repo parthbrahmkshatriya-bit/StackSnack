@@ -10,6 +10,7 @@ const withPlayStoreCompliance = (config) => {
     cfg.modResults = cfg.modResults.filter(
       (item) => item.key !== 'RNIap_playBillingSdkVersion' && 
                 item.key !== 'playBillingSdkVersion' &&
+                item.key !== 'android.aapt2Version' &&
                 item.key !== 'android.aapt2FromMavenOverride'
     );
 
@@ -26,11 +27,11 @@ const withPlayStoreCompliance = (config) => {
       value: '6.2.1',
     });
 
-    // Inject AAPT2 Android 15 compatibility helper to resolve resource linking failures
+    // Inject compatible AAPT2 version to support Android 15 resource compilation
     cfg.modResults.push({
       type: 'property',
-      key: 'android.aapt2FromMavenOverride',
-      value: 'com.android.tools.build:aapt2:8.6.1-11315950',
+      key: 'android.aapt2Version',
+      value: '8.6.1-11315950',
     });
 
     return cfg;
