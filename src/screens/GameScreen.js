@@ -53,13 +53,93 @@ const SCORE_TABLE = [0, 100, 300, 500, 800];
 // ─── Pure game logic helpers (no React) ──────────────────────────────────────
 const newBoard = () => Array.from({ length: ROWS }, () => Array(COLS).fill(null));
 
-const randPiece = () => {
-  const p = PIECES[Math.floor(Math.random() * PIECES.length)];
+const randPiece = (theme) => {
+  const idx = Math.floor(Math.random() * PIECES.length);
+  const p = PIECES[idx];
+  const colors = theme?.platformColors || ['#3498DB'];
+  const color = colors[idx % colors.length];
   return {
     cells: p.cells.map(c => [...c]),
-    color: p.color,
+    color: color,
     x: Math.floor(COLS / 2) - 2,
     y: -1,
+  };
+};
+
+const getCellStyle = (cell, theme, CELL_SIZE) => {
+  if (!cell) {
+    return {
+      width: CELL_SIZE,
+      height: CELL_SIZE,
+      backgroundColor: theme.cellEmptyBg || 'rgba(255,255,255,0.02)',
+      borderColor: theme.cellEmptyBorder || 'rgba(255,255,255,0.04)',
+      borderWidth: 0.5,
+    };
+  }
+
+  if (cell.ghost) {
+    return {
+      width: CELL_SIZE,
+      height: CELL_SIZE,
+      backgroundColor: cell.color,
+      opacity: theme.style === 'wood' ? 0.25 : 0.18,
+      borderColor: 'transparent',
+      borderWidth: 0.5,
+      borderRadius: theme.style === 'wood' ? 4 : 0,
+    };
+  }
+
+  // Active or Locked block
+  const baseStyle = {
+    width: CELL_SIZE,
+    height: CELL_SIZE,
+    backgroundColor: cell.color,
+  };
+
+  if (theme.style === 'wood') {
+    return {
+      ...baseStyle,
+      borderWidth: 2,
+      borderTopColor: 'rgba(255,255,255,0.45)',
+      borderLeftColor: 'rgba(255,255,255,0.35)',
+      borderBottomColor: 'rgba(0,0,0,0.6)',
+      borderRightColor: 'rgba(0,0,0,0.5)',
+      borderRadius: 4,
+    };
+  }
+
+  if (theme.style === 'neon') {
+    return {
+      ...baseStyle,
+      borderWidth: 2,
+      borderColor: cell.color,
+      backgroundColor: '#000000',
+      shadowColor: cell.color,
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 0.9,
+      shadowRadius: 5,
+      elevation: 4,
+      borderRadius: 2,
+    };
+  }
+
+  if (theme.style === 'gold') {
+    return {
+      ...baseStyle,
+      borderWidth: 2,
+      borderTopColor: 'rgba(255, 215, 0, 0.6)',
+      borderLeftColor: 'rgba(255, 215, 0, 0.4)',
+      borderBottomColor: 'rgba(101, 67, 33, 0.8)',
+      borderRightColor: 'rgba(101, 67, 33, 0.6)',
+      borderRadius: 3,
+    };
+  }
+
+  // default flat
+  return {
+    ...baseStyle,
+    borderColor: 'rgba(0,0,0,0.3)',
+    borderWidth: 0.5,
   };
 };
 
@@ -90,8 +170,8 @@ export default function GameScreen({ navigation, route }) {
   // Single ref for ALL mutable game state — no stale-closure problems
   const G = useRef({
     board: newBoard(),
-    cur: randPiece(),
-    nxt: randPiece(),
+    cur: randPiece(theme),
+    nxt: randPiece(theme),
     score: 0,
     lines: 0,
     level: 0,
@@ -177,7 +257,7 @@ export default function GameScreen({ navigation, route }) {
     spawnNext() {
       const g = G.current;
       g.cur = g.nxt;
-      g.nxt = randPiece();
+      g.nxt = randPiece(theme);
       // Check game over: new piece spawns into occupied space
       if (!isValid(g.cur.cells, g.cur.x, g.cur.y, g.board)) {
         g.gameOver = true;
@@ -405,6 +485,57 @@ export default function GameScreen({ navigation, route }) {
   const g = G.current;
   const MINI = 14; // mini-cell size in next-piece preview
 
+  const iq = 80 + Math.floor(g.score / 150);
+  const scoreInCurrentTier = g.score % 150;
+  const iqProgress = `${Math.min(100, Math.max(0, (scoreInCurrentTier / 150) * 100))}%`;
+
+  const boardFrameStyle = useMemo(() => {
+    if (theme.style === 'wood') {
+      return {
+        borderWidth: 6,
+        borderColor: theme.boardBorder || '#5C4033',
+        borderRadius: 12,
+        backgroundColor: theme.boardBg || '#2C1A11',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.5,
+        shadowRadius: 8,
+        elevation: 8,
+      };
+    }
+    if (theme.style === 'neon') {
+      return {
+        borderWidth: 2.5,
+        borderColor: theme.boardBorder || '#00FFFF',
+        borderRadius: 8,
+        backgroundColor: theme.boardBg || '#000',
+        shadowColor: theme.boardBorder || '#00FFFF',
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.6,
+        shadowRadius: 10,
+        elevation: 6,
+      };
+    }
+    if (theme.style === 'gold') {
+      return {
+        borderWidth: 5,
+        borderColor: theme.boardBorder || '#D4AC0D',
+        borderRadius: 10,
+        backgroundColor: theme.boardBg || '#1C120C',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.4,
+        shadowRadius: 6,
+        elevation: 6,
+      };
+    }
+    return {
+      borderWidth: 1,
+      borderColor: theme.boardBorder || 'rgba(255,255,255,0.12)',
+      backgroundColor: 'transparent',
+    };
+  }, [theme]);
+
   return (
     <View
       style={[
@@ -418,14 +549,73 @@ export default function GameScreen({ navigation, route }) {
       <StatusBar barStyle="light-content" />
 
       {/* ── HUD ─────────────────────────────────────────────────────────── */}
-      <View style={styles.hud}>
+      <View style={[
+        styles.hud,
+        theme.style === 'wood' && styles.hudWood,
+        theme.style === 'neon' && styles.hudNeon,
+        theme.style === 'gold' && styles.hudGold,
+      ]}>
+        {/* Left Side: Pause Button */}
         <TouchableOpacity onPress={togglePause} style={styles.pauseBtn}>
-          <Text style={styles.pauseIcon}>{isPaused ? '▶' : '⏸'}</Text>
+          <Text style={[styles.pauseIcon, { color: theme.uiText || '#fff' }]}>
+            {isPaused ? '▶' : '⏸'}
+          </Text>
         </TouchableOpacity>
-        <Text style={styles.scoreText}>{g.score}</Text>
-        <View style={styles.hudRight}>
-          <Text style={styles.hudLabel}>LV {g.level + 1}</Text>
-          <Text style={styles.hudLabel}>{g.lines}L</Text>
+
+        {/* Central HUD Card: IQ & Avatar */}
+        <View style={[
+          styles.iqCard,
+          theme.style === 'wood' && styles.iqCardWood,
+          theme.style === 'neon' && styles.iqCardNeon,
+          theme.style === 'gold' && styles.iqCardGold,
+        ]}>
+          {/* Avatar Container */}
+          <View style={[
+            styles.avatarContainer,
+            theme.style === 'wood' && styles.avatarWood,
+            theme.style === 'neon' && styles.avatarNeon,
+            theme.style === 'gold' && styles.avatarGold,
+          ]}>
+            <Text style={styles.avatarEmoji}>👴</Text>
+          </View>
+          
+          {/* IQ Text & Progress Bar */}
+          <View style={styles.iqProgressColumn}>
+            <Text style={[
+              styles.iqText, 
+              { color: theme.uiText || '#fff' },
+              theme.style === 'wood' && { color: '#F5DEB3' },
+              theme.style === 'gold' && { color: '#F1C40F' }
+            ]}>
+              IQ : {iq}
+            </Text>
+            
+            {/* Progress Bar Track */}
+            <View style={[
+              styles.progressBarTrack,
+              theme.style === 'wood' && { backgroundColor: '#23140C' },
+              theme.style === 'gold' && { backgroundColor: '#251912' },
+            ]}>
+              <View style={[
+                styles.progressBarFill,
+                { width: iqProgress },
+                theme.style === 'wood' && { backgroundColor: '#CD853F' },
+                theme.style === 'neon' && { backgroundColor: '#00FFFF' },
+                theme.style === 'gold' && { backgroundColor: '#D4AC0D' },
+              ]} />
+            </View>
+          </View>
+        </View>
+
+        {/* Right Side: Score, LV & Lines */}
+        <View style={styles.hudRightContainer}>
+          <Text style={[styles.scoreTextNew, { color: theme.uiText || '#fff' }]}>
+            {g.score}
+          </Text>
+          <View style={styles.levelLineBox}>
+            <Text style={[styles.hudLabelNew, { color: theme.style === 'wood' ? '#A9DFBF' : theme.uiText ? `${theme.uiText}80` : 'rgba(255,255,255,0.45)' }]}>LV {g.level + 1}</Text>
+            <Text style={[styles.hudLabelNew, { color: theme.style === 'wood' ? '#A9DFBF' : theme.uiText ? `${theme.uiText}80` : 'rgba(255,255,255,0.45)' }]}>{g.lines}L</Text>
+          </View>
         </View>
       </View>
 
@@ -435,7 +625,12 @@ export default function GameScreen({ navigation, route }) {
         <View
           style={[
             styles.board,
-            { width: BOARD_W, height: BOARD_H, marginLeft: BOARD_ML },
+            boardFrameStyle,
+            {
+              width: BOARD_W + (theme.style === 'wood' ? 12 : theme.style === 'gold' ? 10 : theme.style === 'neon' ? 5 : 2),
+              height: BOARD_H + (theme.style === 'wood' ? 12 : theme.style === 'gold' ? 10 : theme.style === 'neon' ? 5 : 2),
+              marginLeft: BOARD_ML,
+            },
           ]}
         >
           {displayBoard.map((row, r) => (
@@ -443,22 +638,7 @@ export default function GameScreen({ navigation, route }) {
               {row.map((cell, c) => (
                 <View
                   key={c}
-                  style={[
-                    styles.cell,
-                    { width: CELL, height: CELL },
-                    cell && !cell.ghost
-                      ? { backgroundColor: cell.color, borderColor: 'rgba(0,0,0,0.3)' }
-                      : cell && cell.ghost
-                      ? {
-                          backgroundColor: cell.color,
-                          opacity: 0.18,
-                          borderColor: 'transparent',
-                        }
-                      : {
-                          backgroundColor: 'rgba(255,255,255,0.02)',
-                          borderColor: 'rgba(255,255,255,0.04)',
-                        },
-                  ]}
+                  style={getCellStyle(cell, theme, CELL)}
                 />
               ))}
             </View>
@@ -467,59 +647,167 @@ export default function GameScreen({ navigation, route }) {
 
         {/* Side panel: next piece + stats */}
         <View style={styles.sidePanel}>
-          <Text style={styles.sideLabel}>NEXT</Text>
-          <View style={styles.nextBox}>
-            {nxtDisplay.map((row, r) => (
-              <View key={r} style={{ flexDirection: 'row' }}>
-                {row.map((cell, c) => (
-                  <View
-                    key={c}
-                    style={{
-                      width: MINI,
-                      height: MINI,
-                      backgroundColor: cell || 'transparent',
-                      margin: 0.5,
-                    }}
-                  />
-                ))}
-              </View>
-            ))}
+          <View style={[
+            styles.sideCard,
+            theme.style === 'wood' && styles.sideCardWood,
+            theme.style === 'neon' && styles.sideCardNeon,
+            theme.style === 'gold' && styles.sideCardGold,
+          ]}>
+            <Text style={[
+              styles.sideLabelNew,
+              { color: theme.uiText ? `${theme.uiText}aa` : 'rgba(255,255,255,0.5)' },
+              theme.style === 'wood' && { color: '#CD853F' },
+              theme.style === 'gold' && { color: '#CA9B1B' }
+            ]}>NEXT</Text>
+            <View style={[
+              styles.nextBoxNew,
+              theme.style === 'wood' && styles.nextBoxWood,
+              theme.style === 'neon' && styles.nextBoxNeon,
+              theme.style === 'gold' && styles.nextBoxGold,
+            ]}>
+              {nxtDisplay.map((row, r) => (
+                <View key={r} style={{ flexDirection: 'row' }}>
+                  {row.map((cell, c) => (
+                    <View
+                      key={c}
+                      style={[
+                        {
+                          width: MINI,
+                          height: MINI,
+                          margin: 1.5,
+                        },
+                        getCellStyle(cell ? { color: cell, ghost: false } : null, theme, MINI)
+                      ]}
+                    />
+                  ))}
+                </View>
+              ))}
+            </View>
           </View>
 
-          <Text style={styles.sideStat}>BEST</Text>
-          <Text style={styles.sideStatVal}>{g.bestScore}</Text>
+          <View style={[
+            styles.sideCard,
+            theme.style === 'wood' && styles.sideCardWood,
+            theme.style === 'neon' && styles.sideCardNeon,
+            theme.style === 'gold' && styles.sideCardGold,
+            { marginTop: 12 }
+          ]}>
+            <Text style={[
+              styles.sideLabelNew,
+              { color: theme.uiText ? `${theme.uiText}aa` : 'rgba(255,255,255,0.5)' },
+              theme.style === 'wood' && { color: '#CD853F' },
+              theme.style === 'gold' && { color: '#CA9B1B' }
+            ]}>BEST</Text>
+            <Text style={[
+              styles.sideValNew,
+              { color: theme.uiText || '#fff' },
+              theme.style === 'wood' && { color: '#F5DEB3' },
+              theme.style === 'gold' && { color: '#F1C40F' }
+            ]}>{g.bestScore}</Text>
+          </View>
 
-          <Text style={styles.sideStat}>COMBO</Text>
-          <Text style={[styles.sideStatVal, { color: '#F39C12' }]}>
-            {g.combo > 1 ? `×${g.combo}` : '—'}
-          </Text>
+          <View style={[
+            styles.sideCard,
+            theme.style === 'wood' && styles.sideCardWood,
+            theme.style === 'neon' && styles.sideCardNeon,
+            theme.style === 'gold' && styles.sideCardGold,
+            { marginTop: 12 }
+          ]}>
+            <Text style={[
+              styles.sideLabelNew,
+              { color: theme.uiText ? `${theme.uiText}aa` : 'rgba(255,255,255,0.5)' },
+              theme.style === 'wood' && { color: '#CD853F' },
+              theme.style === 'gold' && { color: '#CA9B1B' }
+            ]}>COMBO</Text>
+            <Text style={[
+              styles.sideValNew,
+              { color: theme.style === 'wood' ? '#E59866' : theme.style === 'gold' ? '#F39C12' : '#FF00FF' },
+              g.combo > 1 ? {} : { color: 'rgba(255,255,255,0.3)' }
+            ]}>
+              {g.combo > 1 ? `×${g.combo}` : '—'}
+            </Text>
+          </View>
         </View>
       </View>
 
       {/* ── Gesture Legend ──────────────────────────────────────────────── */}
-      <View style={[styles.legendContainer, { paddingBottom: Math.max(insets.bottom, 12) }]}>
-        <Text style={styles.legendText}>
+      <View style={[
+        styles.legendContainer, 
+        { paddingBottom: Math.max(insets.bottom, 12) },
+        theme.style === 'wood' && styles.legendWood,
+        theme.style === 'neon' && styles.legendNeon,
+        theme.style === 'gold' && styles.legendGold,
+      ]}>
+        <Text style={[
+          styles.legendText,
+          theme.style === 'wood' && { color: '#F5DEB3' },
+          theme.style === 'neon' && { color: '#00FFFF' },
+          theme.style === 'gold' && { color: '#F1C40F' },
+        ]}>
           ◀ Swipe Left / Right to Move ▶
         </Text>
         <View style={styles.legendRow}>
-          <Text style={styles.legendSubText}>Tap to Rotate</Text>
-          <Text style={styles.legendDot}>•</Text>
-          <Text style={styles.legendSubText}>Flick Down to Drop</Text>
+          <Text style={[
+            styles.legendSubText,
+            theme.style === 'wood' && { color: '#CD853F' },
+            theme.style === 'neon' && { color: '#FF00FF' },
+            theme.style === 'gold' && { color: '#E59866' },
+          ]}>Tap to Rotate</Text>
+          <Text style={[
+            styles.legendDot,
+            theme.style === 'wood' && { color: '#5C4033' },
+            theme.style === 'neon' && { color: 'rgba(0, 255, 255, 0.3)' },
+            theme.style === 'gold' && { color: '#D4AC0D' },
+          ]}>•</Text>
+          <Text style={[
+            styles.legendSubText,
+            theme.style === 'wood' && { color: '#CD853F' },
+            theme.style === 'neon' && { color: '#FF00FF' },
+            theme.style === 'gold' && { color: '#E59866' },
+          ]}>Flick Down to Drop</Text>
         </View>
       </View>
 
       {/* ── Pause overlay ─────────────────────────────────────────────────── */}
       {isPaused && (
         <View style={styles.pauseOverlay}>
-          <Text style={styles.pauseTitle}>PAUSED</Text>
-          <TouchableOpacity style={styles.pauseResumeBtn} onPress={togglePause}>
-            <Text style={styles.pauseResumeTxt}>RESUME</Text>
+          <Text style={[
+            styles.pauseTitle,
+            theme.style === 'wood' && { color: '#F5DEB3' },
+            theme.style === 'neon' && { color: '#00FFFF' },
+            theme.style === 'gold' && { color: '#F1C40F' },
+          ]}>PAUSED</Text>
+          <TouchableOpacity 
+            style={[
+              styles.pauseResumeBtn,
+              theme.style === 'wood' && { backgroundColor: '#CD853F', borderWidth: 2, borderColor: '#8B4513' },
+              theme.style === 'neon' && { backgroundColor: '#000000', borderWidth: 2, borderColor: '#00FFFF', shadowColor: '#00FFFF', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.8, shadowRadius: 6, elevation: 5 },
+              theme.style === 'gold' && { backgroundColor: '#D4AC0D', borderWidth: 2, borderColor: '#B7950B' },
+            ]} 
+            onPress={togglePause}
+          >
+            <Text style={[
+              styles.pauseResumeTxt,
+              theme.style === 'wood' && { color: '#180B05' },
+              theme.style === 'neon' && { color: '#00FFFF' },
+              theme.style === 'gold' && { color: '#120B05' },
+            ]}>RESUME</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={styles.pauseHomeBtn}
+            style={[
+              styles.pauseHomeBtn,
+              theme.style === 'wood' && { backgroundColor: '#3D2314', borderWidth: 2, borderColor: '#5C4033' },
+              theme.style === 'neon' && { backgroundColor: '#000000', borderWidth: 2, borderColor: '#FF00FF', shadowColor: '#FF00FF', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.8, shadowRadius: 6, elevation: 5 },
+              theme.style === 'gold' && { backgroundColor: '#1C120C', borderWidth: 2, borderColor: '#D4AC0D' },
+            ]}
             onPress={() => navigation.replace('Home')}
           >
-            <Text style={styles.pauseHomeTxt}>HOME</Text>
+            <Text style={[
+              styles.pauseHomeTxt,
+              theme.style === 'wood' && { color: '#F5DEB3' },
+              theme.style === 'neon' && { color: '#FF00FF' },
+              theme.style === 'gold' && { color: '#F1C40F' },
+            ]}>HOME</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -585,6 +873,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 16,
     height: 90,
+    marginHorizontal: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'transparent',
   },
   legendText: {
     color: 'rgba(255, 255, 255, 0.65)',
@@ -641,4 +933,232 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   pauseHomeTxt: { color: 'rgba(255,255,255,0.8)', fontSize: 18, fontWeight: '600' },
+
+  // New themed styling
+  hudWood: {
+    borderBottomWidth: 2,
+    borderBottomColor: '#5C4033',
+    backgroundColor: '#2C1A11',
+  },
+  hudNeon: {
+    borderBottomWidth: 1.5,
+    borderBottomColor: '#00FFFF',
+    backgroundColor: '#05050C',
+  },
+  hudGold: {
+    borderBottomWidth: 2,
+    borderBottomColor: '#D4AC0D',
+    backgroundColor: '#1C120C',
+  },
+  iqCard: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    marginHorizontal: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  iqCardWood: {
+    backgroundColor: '#3D2314',
+    borderWidth: 2,
+    borderColor: '#5C4033',
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.4,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  iqCardNeon: {
+    backgroundColor: 'rgba(0, 255, 255, 0.05)',
+    borderWidth: 1.5,
+    borderColor: '#00FFFF',
+    borderRadius: 16,
+    shadowColor: '#00FFFF',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.5,
+    shadowRadius: 5,
+    elevation: 3,
+  },
+  iqCardGold: {
+    backgroundColor: '#251912',
+    borderWidth: 2,
+    borderColor: '#D4AC0D',
+    borderRadius: 16,
+    shadowColor: '#D4AC0D',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.4,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  avatarContainer: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 6,
+  },
+  avatarWood: {
+    backgroundColor: '#5C4033',
+    borderWidth: 1.5,
+    borderColor: '#CD853F',
+  },
+  avatarNeon: {
+    backgroundColor: '#05050C',
+    borderWidth: 1.5,
+    borderColor: '#00FFFF',
+    shadowColor: '#00FFFF',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 4,
+  },
+  avatarGold: {
+    backgroundColor: '#1C120C',
+    borderWidth: 1.5,
+    borderColor: '#D4AC0D',
+  },
+  avatarEmoji: {
+    fontSize: 15,
+  },
+  iqProgressColumn: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  iqText: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 2,
+  },
+  progressBarTrack: {
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    overflow: 'hidden',
+  },
+  progressBarFill: {
+    height: '100%',
+    borderRadius: 2.5,
+    backgroundColor: '#3498DB',
+  },
+  hudRightContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 54,
+    paddingLeft: 2,
+  },
+  scoreTextNew: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#fff',
+  },
+  levelLineBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 1,
+  },
+  hudLabelNew: {
+    fontSize: 9,
+    fontWeight: '700',
+    marginHorizontal: 2,
+  },
+  sideCard: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 6,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.06)',
+    width: '90%',
+    minWidth: 62,
+  },
+  sideCardWood: {
+    backgroundColor: '#3D2314',
+    borderWidth: 2,
+    borderColor: '#5C4033',
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.4,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  sideCardNeon: {
+    backgroundColor: 'rgba(0, 255, 255, 0.02)',
+    borderWidth: 1,
+    borderColor: '#00FFFF',
+    borderRadius: 12,
+    shadowColor: '#00FFFF',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.4,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  sideCardGold: {
+    backgroundColor: '#251912',
+    borderWidth: 2,
+    borderColor: '#D4AC0D',
+    borderRadius: 12,
+    shadowColor: '#D4AC0D',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.4,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  sideLabelNew: {
+    fontSize: 8.5,
+    fontWeight: '800',
+    letterSpacing: 1,
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  sideValNew: {
+    fontSize: 14,
+    fontWeight: '800',
+    textAlign: 'center',
+  },
+  nextBoxNew: {
+    padding: 4,
+    borderRadius: 6,
+    backgroundColor: 'rgba(0,0,0,0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  nextBoxWood: {
+    backgroundColor: '#23140C',
+  },
+  nextBoxNeon: {
+    backgroundColor: '#05050C',
+  },
+  nextBoxGold: {
+    backgroundColor: '#1C120C',
+  },
+  legendWood: {
+    backgroundColor: '#3D2314',
+    borderColor: '#5C4033',
+    borderWidth: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  legendNeon: {
+    backgroundColor: 'rgba(0, 255, 255, 0.01)',
+    borderColor: 'rgba(0, 255, 255, 0.1)',
+    borderWidth: 1,
+  },
+  legendGold: {
+    backgroundColor: '#251912',
+    borderColor: '#D4AC0D',
+    borderWidth: 2,
+  },
 });
