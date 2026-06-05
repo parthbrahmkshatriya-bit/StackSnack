@@ -2,7 +2,7 @@
   "expo": {
     "name": "Stack & Snap",
     "slug": "stacksnap",
-    "version": "1.0.0",
+    "version": "3.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -14,7 +14,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.stacksnap.app",
-      "buildNumber": "1",
+      "buildNumber": "3",
       "infoPlist": {
         "SKAdNetworkItems": [
           {
@@ -33,7 +33,7 @@
         "backgroundColor": "#1A1A2E"
       },
       "package": "com.stacksnap.app",
-      "versionCode": 2,
+      "versionCode": 3,
       "permissions": []
     },
     "plugins": [
