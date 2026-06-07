@@ -77,6 +77,21 @@ const getCellStyle = (cell, theme, CELL_SIZE) => {
     };
   }
 
+  if (cell.flash) {
+    return {
+      width: CELL_SIZE,
+      height: CELL_SIZE,
+      backgroundColor: '#FFFFFF',
+      borderColor: '#FFFFFF',
+      borderWidth: 1.5,
+      shadowColor: theme.style === 'wood' ? '#FFA500' : theme.style === 'neon' ? '#00FFFF' : '#F1C40F',
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 1,
+      shadowRadius: 12,
+      elevation: 8,
+    };
+  }
+
   if (cell.ghost) {
     return {
       width: CELL_SIZE,
@@ -96,15 +111,22 @@ const getCellStyle = (cell, theme, CELL_SIZE) => {
     backgroundColor: cell.color,
   };
 
+  const isGlowing = cell.lockedAt && (Date.now() - cell.lockedAt < 400);
+
   if (theme.style === 'wood') {
     return {
       ...baseStyle,
       borderWidth: 2,
-      borderTopColor: 'rgba(255,255,255,0.45)',
-      borderLeftColor: 'rgba(255,255,255,0.35)',
-      borderBottomColor: 'rgba(0,0,0,0.6)',
-      borderRightColor: 'rgba(0,0,0,0.5)',
+      borderTopColor: isGlowing ? '#FFFFFF' : 'rgba(255,255,255,0.45)',
+      borderLeftColor: isGlowing ? '#FFFFFF' : 'rgba(255,255,255,0.35)',
+      borderBottomColor: isGlowing ? '#FFFFFF' : 'rgba(0,0,0,0.6)',
+      borderRightColor: isGlowing ? '#FFFFFF' : 'rgba(0,0,0,0.5)',
       borderRadius: 4,
+      shadowColor: isGlowing ? '#FFA500' : 'transparent',
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: isGlowing ? 1.0 : 0,
+      shadowRadius: isGlowing ? 10 : 0,
+      elevation: isGlowing ? 6 : 0,
     };
   }
 
@@ -112,13 +134,13 @@ const getCellStyle = (cell, theme, CELL_SIZE) => {
     return {
       ...baseStyle,
       borderWidth: 2,
-      borderColor: cell.color,
+      borderColor: isGlowing ? '#FFFFFF' : cell.color,
       backgroundColor: '#000000',
       shadowColor: cell.color,
       shadowOffset: { width: 0, height: 0 },
-      shadowOpacity: 0.9,
-      shadowRadius: 5,
-      elevation: 4,
+      shadowOpacity: isGlowing ? 1.0 : 0.9,
+      shadowRadius: isGlowing ? 12 : 5,
+      elevation: isGlowing ? 6 : 4,
       borderRadius: 2,
     };
   }
@@ -127,18 +149,23 @@ const getCellStyle = (cell, theme, CELL_SIZE) => {
     return {
       ...baseStyle,
       borderWidth: 2,
-      borderTopColor: 'rgba(255, 215, 0, 0.6)',
-      borderLeftColor: 'rgba(255, 215, 0, 0.4)',
-      borderBottomColor: 'rgba(101, 67, 33, 0.8)',
-      borderRightColor: 'rgba(101, 67, 33, 0.6)',
+      borderTopColor: isGlowing ? '#FFFFFF' : 'rgba(255, 215, 0, 0.6)',
+      borderLeftColor: isGlowing ? '#FFFFFF' : 'rgba(255, 215, 0, 0.4)',
+      borderBottomColor: isGlowing ? '#FFFFFF' : 'rgba(101, 67, 33, 0.8)',
+      borderRightColor: isGlowing ? '#FFFFFF' : 'rgba(101, 67, 33, 0.6)',
       borderRadius: 3,
+      shadowColor: isGlowing ? '#F1C40F' : 'transparent',
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: isGlowing ? 1.0 : 0,
+      shadowRadius: isGlowing ? 10 : 0,
+      elevation: isGlowing ? 6 : 0,
     };
   }
 
   // default flat
   return {
     ...baseStyle,
-    borderColor: 'rgba(0,0,0,0.3)',
+    borderColor: isGlowing ? '#FFFFFF' : 'rgba(0,0,0,0.3)',
     borderWidth: 0.5,
   };
 };
@@ -215,8 +242,11 @@ export default function GameScreen({ navigation, route }) {
       const g = G.current;
       g.cur.cells.forEach(([cx, cy]) => {
         const ny = cy + g.cur.y;
-        if (ny >= 0) g.board[ny][cx + g.cur.x] = g.cur.color;
+        if (ny >= 0) {
+          g.board[ny][cx + g.cur.x] = { color: g.cur.color, lockedAt: Date.now() };
+        }
       });
+      play('trim'); // Play satisfy thud/settle sound!
       L.current.checkLines();
     },
 
@@ -443,9 +473,13 @@ export default function GameScreen({ navigation, route }) {
     const g = G.current;
     const { board, cur, flashRows, nxt } = g;
 
-    // display[r][c] = null | { color: string, ghost: boolean }
+    // display[r][c] = null | { color: string, ghost: boolean, lockedAt?: number, flash?: boolean }
     const display = board.map(row =>
-      row.map(cell => (cell ? { color: cell, ghost: false } : null))
+      row.map(cell => {
+        if (!cell) return null;
+        if (typeof cell === 'string') return { color: cell, ghost: false };
+        return { color: cell.color, ghost: false, lockedAt: cell.lockedAt };
+      })
     );
 
     // Ghost piece (semi-transparent landing preview)
@@ -468,9 +502,9 @@ export default function GameScreen({ navigation, route }) {
     // Flash cleared rows white
     flashRows.forEach(r => {
       for (let c = 0; c < COLS; c++) {
-        display[r][c] = { color: '#FFFFFF', ghost: false };
+        display[r][c] = { color: '#FFFFFF', ghost: false, flash: true };
       }
-        });
+    });
 
     // Next piece 4×4 preview grid
     const mini = Array.from({ length: 4 }, () => Array(4).fill(null));

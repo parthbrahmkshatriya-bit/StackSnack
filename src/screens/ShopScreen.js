@@ -149,6 +149,7 @@ export default function ShopScreen({ navigation }) {
 
   // ── Activate theme ────────────────────────────────────────────────────
   const handleActivate = useCallback(async (themeId) => {
+    play('tap');
     await setActiveTheme(themeId);
     setActiveThemeId(themeId);
     logEvent(Events.THEME_CHANGED, { themeId });
@@ -194,7 +195,7 @@ export default function ShopScreen({ navigation }) {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+        <TouchableOpacity onPress={() => { play('tap'); navigation.goBack(); }} style={styles.backBtn}>
           <Text style={styles.backArrow}>←</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>🎨 THEMES</Text>

@@ -45,6 +45,7 @@ import { AD_UNIT_IDS } from '../constants/admob';
 import { INTERSTITIAL_FREQUENCY, MAX_REWARDED_CONTINUES } from '../constants/game';
 import { logEvent, Events } from '../utils/analytics';
 import { THEMES } from '../constants/themes';
+import { useSound } from '../hooks/useSound';
 
 const interstitial = InterstitialAd.createForAdRequest(AD_UNIT_IDS.INTERSTITIAL, {
   requestNonPersonalizedAdsOnly: false,
@@ -63,6 +64,7 @@ export default function GameOverScreen({ navigation, route }) {
   } = route.params || {};
 
   const theme = THEMES[themeId] || THEMES.theme_default;
+  const { play, playBGM } = useSound();
 
   const [bestScore, setBestScore] = useState(0);
   const [isNewBest, setIsNewBest] = useState(false);
@@ -167,12 +169,15 @@ export default function GameOverScreen({ navigation, route }) {
 
   // ── Fresh retry ───────────────────────────────────────────────────────
   const handleRetry = useCallback(() => {
+    play('tap');
+    playBGM();
     navigation.replace('Game', { theme: themeId });
-  }, [navigation, themeId]);
+  }, [navigation, themeId, play, playBGM]);
 
   // ── Share score card ──────────────────────────────────────────────────
   // FIX: Uses react-native-view-shot to capture actual image (not just text)
   const handleShare = useCallback(async () => {
+    play('tap');
     setSharing(true);
     try {
       const uri = await scoreCardRef.current.capture();
@@ -267,7 +272,10 @@ export default function GameOverScreen({ navigation, route }) {
           {/* Home */}
           <TouchableOpacity
             style={styles.homeBtn}
-            onPress={() => navigation.replace('Home')}
+            onPress={() => {
+              play('tap');
+              navigation.replace('Home');
+            }}
           >
             <Text style={styles.homeBtnText}>HOME</Text>
           </TouchableOpacity>

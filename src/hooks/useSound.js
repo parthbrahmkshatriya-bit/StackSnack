@@ -1,14 +1,11 @@
 /**
- * useSound.js — Audio management using expo-av
+ * useSound.js — Audio management using expo-av (Global Singleton Pattern)
  *
- * Loads all sounds on mount. Respects the mute toggle.
- * Sounds are <100KB each (sourced from freesound.org or Bfxr).
- *
- * NOTE: Sound files go in /assets/sounds/
- * Source from: https://freesound.org or https://www.bfxr.net
+ * Implements a global audio cache to prevent multiple instances from overlapping,
+ * allowing seamless BGM playback and immediate SFX response.
  */
 
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useCallback, useState } from 'react';
 import { Audio } from 'expo-av';
 import { getSoundOn } from '../utils/storage';
 
@@ -25,48 +22,57 @@ const SOUND_FILES = {
   bgm: require('../../assets/sounds/bgm.mp3'),
 };
 
+// Global Singletons to manage audio state across navigation stack
+let globalBGM = null;
+let globalSounds = {};
+let isBgmPlaying = false;
+let soundEnabled = true;
+let isLoaded = false;
+let loadingPromise = null;
+
+async function loadSoundsAsync() {
+  if (isLoaded) return;
+  
+  soundEnabled = await getSoundOn();
+
+  await Audio.setAudioModeAsync({
+    playsInSilentModeIOS: true,
+    staysActiveInBackground: false,
+  });
+
+  for (const [name, file] of Object.entries(SOUND_FILES)) {
+    try {
+      const { sound } = await Audio.Sound.createAsync(file, {
+        shouldPlay: false,
+        volume: name === 'bgm' ? 0.35 : 1.0,
+        isLooping: name === 'bgm',
+      });
+      if (name === 'bgm') {
+        globalBGM = sound;
+      } else {
+        globalSounds[name] = sound;
+      }
+    } catch (e) {
+      console.warn(`Sound load failed: ${name}`, e);
+    }
+  }
+  isLoaded = true;
+}
+
 export function useSound() {
-  const sounds = useRef({});
-  const soundOn = useRef(true);
+  const [, setTrigger] = useState(0);
 
   useEffect(() => {
-    let mounted = true;
-
-    async function loadSounds() {
-      soundOn.current = await getSoundOn();
-
-      await Audio.setAudioModeAsync({
-        playsInSilentModeIOS: false, // Respect silent switch on iOS
-        staysActiveInBackground: false,
+    if (!loadingPromise) {
+      loadingPromise = loadSoundsAsync().then(() => {
+        setTrigger(t => t + 1); // trigger re-render once loaded
       });
-
-      for (const [name, file] of Object.entries(SOUND_FILES)) {
-        try {
-          const { sound } = await Audio.Sound.createAsync(file, {
-            shouldPlay: false,
-            volume: name === 'bgm' ? 0.35 : 1.0, // Mute background music slightly so sfx pop!
-            isLooping: name === 'bgm', // Loop background music!
-          });
-          if (mounted) sounds.current[name] = sound;
-        } catch (e) {
-          // Missing sound file is non-fatal — game works without audio
-          console.warn(`Sound load failed: ${name}`, e);
-        }
-      }
     }
-
-    loadSounds();
-
-    return () => {
-      mounted = false;
-      // Release all audio resources on unmount
-      Object.values(sounds.current).forEach((s) => s.unloadAsync());
-    };
   }, []);
 
   const play = useCallback(async (name) => {
-    if (!soundOn.current) return;
-    const sound = sounds.current[name];
+    if (!soundEnabled || !isLoaded) return;
+    const sound = globalSounds[name];
     if (!sound) return;
     try {
       await sound.replayAsync();
@@ -76,32 +82,41 @@ export function useSound() {
   }, []);
 
   const playBGM = useCallback(async () => {
-    if (!soundOn.current) return;
-    const sound = sounds.current.bgm;
-    if (!sound) return;
+    if (!soundEnabled) return;
+    
+    // Ensure BGM is loaded
+    if (!isLoaded && loadingPromise) {
+      await loadingPromise;
+    }
+    
+    if (!globalBGM || isBgmPlaying) return;
+
     try {
-      await sound.playAsync();
-    } catch {
-      // Ignore BGM play errors
+      await globalBGM.playAsync();
+      isBgmPlaying = true;
+    } catch (e) {
+      console.warn('BGM play failed:', e);
     }
   }, []);
 
   const stopBGM = useCallback(async () => {
-    const sound = sounds.current.bgm;
-    if (!sound) return;
+    if (!globalBGM || !isBgmPlaying) return;
     try {
-      await sound.stopAsync();
-    } catch {
-      // Ignore BGM stop errors
+      await globalBGM.stopAsync();
+      isBgmPlaying = false;
+    } catch (e) {
+      console.warn('BGM stop failed:', e);
     }
   }, []);
 
   const setSoundEnabled = useCallback((enabled) => {
-    soundOn.current = enabled;
+    soundEnabled = enabled;
     if (!enabled) {
       stopBGM();
+    } else {
+      playBGM();
     }
-  }, [stopBGM]);
+  }, [stopBGM, playBGM]);
 
-  return { play, playBGM, stopBGM, setSoundEnabled };
+  return { play, playBGM, stopBGM, setSoundEnabled, isAudioReady: isLoaded };
 }

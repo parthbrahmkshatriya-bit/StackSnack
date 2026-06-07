@@ -19,10 +19,17 @@ import { BannerAd, BannerAdSize } from 'react-native-google-mobile-ads';
 import { getHighScore, getActiveTheme } from '../utils/storage';
 import { THEMES } from '../constants/themes';
 import { AD_UNIT_IDS } from '../constants/admob';
+import { useSound } from '../hooks/useSound';
 
 export default function HomeScreen({ navigation }) {
   const [bestScore, setBestScore] = useState(0);
   const [themeId, setThemeId] = useState('theme_default');
+  const { play, playBGM } = useSound();
+
+  // Start background music automatically on home screen mount
+  useEffect(() => {
+    playBGM();
+  }, [playBGM]);
 
   const playBtnScale = useSharedValue(1);
   const playBtnStyle = useAnimatedStyle(() => ({
@@ -65,7 +72,10 @@ export default function HomeScreen({ navigation }) {
       <Animated.View style={playBtnStyle}>
         <TouchableOpacity
           style={[styles.playBtn, { backgroundColor: theme.accent }]}
-          onPress={() => navigation.navigate('Game', { theme: themeId })}
+          onPress={() => {
+            play('tap');
+            navigation.navigate('Game', { theme: themeId });
+          }}
           activeOpacity={0.85}
         >
           <Text style={styles.playBtnText}>PLAY</Text>
@@ -75,7 +85,10 @@ export default function HomeScreen({ navigation }) {
       {/* Shop button */}
       <TouchableOpacity
         style={styles.shopBtn}
-        onPress={() => navigation.navigate('Shop')}
+        onPress={() => {
+          play('tap');
+          navigation.navigate('Shop');
+        }}
         activeOpacity={0.8}
       >
         <Text style={styles.shopBtnText}>🎨 THEMES</Text>
