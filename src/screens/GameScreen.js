@@ -470,31 +470,16 @@ export default function GameScreen({ navigation, route }) {
       for (let c = 0; c < COLS; c++) {
         display[r][c] = { color: '#FFFFFF', ghost: false };
       }
-    });
-
-    // Next piece 4×4 preview grid
-    const mini = Array.from({ length: 4 }, () => Array(4).fill(null));
-    nxt.cells.forEach(([cx, cy]) => {
-      if (cy < 4 && cx < 4) mini[cy][cx] = nxt.color;
-    });
-
-    return { displayBoard: display, nxtDisplay: mini };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tick]); // tick is the gate — game state is in refs, re-computed on each tick
-
-  const g = G.current;
-  const MINI = 14; // mini-cell size in next-piece preview
-
-  const iq = 80 + Math.floor(g.score / 150);
-  const scoreInCurrentTier = g.score % 150;
-  const iqProgress = `${Math.min(100, Math.max(0, (scoreInCurrentTier / 150) * 100))}%`;
-
-  const boardFrameStyle = useMemo(() => {
+    });  const boardFrameStyle = useMemo(() => {
     if (theme.style === 'wood') {
       return {
-        borderWidth: 6,
-        borderColor: theme.boardBorder || '#5C4033',
-        borderRadius: 12,
+        borderWidth: 10,
+        borderColor: '#5C4033',
+        borderTopColor: '#8B5A2B',
+        borderLeftColor: '#704214',
+        borderBottomColor: '#2B1408',
+        borderRightColor: '#3B1E0A',
+        borderRadius: 16,
         backgroundColor: theme.boardBg || '#2C1A11',
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 6 },
@@ -548,76 +533,129 @@ export default function GameScreen({ navigation, route }) {
     >
       <StatusBar barStyle="light-content" />
 
-      {/* ── HUD ─────────────────────────────────────────────────────────── */}
-      <View style={[
-        styles.hud,
-        theme.style === 'wood' && styles.hudWood,
-        theme.style === 'neon' && styles.hudNeon,
-        theme.style === 'gold' && styles.hudGold,
-      ]}>
-        {/* Left Side: Pause Button */}
-        <TouchableOpacity onPress={togglePause} style={styles.pauseBtn}>
-          <Text style={[styles.pauseIcon, { color: theme.uiText || '#fff' }]}>
-            {isPaused ? '▶' : '⏸'}
-          </Text>
-        </TouchableOpacity>
-
-        {/* Central HUD Card: IQ & Avatar */}
-        <View style={[
-          styles.iqCard,
-          theme.style === 'wood' && styles.iqCardWood,
-          theme.style === 'neon' && styles.iqCardNeon,
-          theme.style === 'gold' && styles.iqCardGold,
-        ]}>
-          {/* Avatar Container */}
-          <View style={[
-            styles.avatarContainer,
-            theme.style === 'wood' && styles.avatarWood,
-            theme.style === 'neon' && styles.avatarNeon,
-            theme.style === 'gold' && styles.avatarGold,
-          ]}>
-            <Text style={styles.avatarEmoji}>👴</Text>
+      {/* ── Vertical Wood Planks Background ── */}
+      {theme.style === 'wood' && (
+        <View style={StyleSheet.absoluteFill}>
+          <View style={{ flexDirection: 'row', flex: 1 }}>
+            <View style={{ flex: 1, backgroundColor: '#180B05', borderRightWidth: 1, borderRightColor: '#120803', borderLeftWidth: 1, borderLeftColor: '#1d0e07' }} />
+            <View style={{ flex: 1, backgroundColor: '#1a0d06', borderRightWidth: 1, borderRightColor: '#120803', borderLeftWidth: 1, borderLeftColor: '#1f0f08' }} />
+            <View style={{ flex: 1, backgroundColor: '#160904', borderRightWidth: 1, borderRightColor: '#120803', borderLeftWidth: 1, borderLeftColor: '#1b0b05' }} />
+            <View style={{ flex: 1, backgroundColor: '#1a0d06', borderRightWidth: 1, borderRightColor: '#120803', borderLeftWidth: 1, borderLeftColor: '#1f0f08' }} />
+            <View style={{ flex: 1, backgroundColor: '#180B05', borderRightWidth: 1, borderRightColor: '#120803', borderLeftWidth: 1, borderLeftColor: '#1d0e07' }} />
           </View>
-          
-          {/* IQ Text & Progress Bar */}
-          <View style={styles.iqProgressColumn}>
-            <Text style={[
-              styles.iqText, 
-              { color: theme.uiText || '#fff' },
-              theme.style === 'wood' && { color: '#F5DEB3' },
-              theme.style === 'gold' && { color: '#F1C40F' }
-            ]}>
-              IQ : {iq}
-            </Text>
+        </View>
+      )}
+
+      {/* ── Centered Game Title ── */}
+      <Text style={[styles.gameTitle, theme.style === 'wood' && styles.gameTitleWood]}>
+        STACK & SNAP
+      </Text>
+
+      {/* ── HUD ─────────────────────────────────────────────────────────── */}
+      {theme.style === 'wood' ? (
+        <View style={styles.hudWoodContainer}>
+          <View style={styles.hudWoodCard}>
+            {/* Left side: Avatar */}
+            <View style={styles.hudWoodAvatarCol}>
+              <View style={styles.hudWoodAvatarCircle}>
+                <Text style={styles.hudWoodAvatarEmoji}>👷</Text>
+              </View>
+              <View style={styles.hudWoodAvatarBanner}>
+                <Text style={styles.hudWoodAvatarName}>Alex</Text>
+              </View>
+            </View>
             
-            {/* Progress Bar Track */}
-            <View style={[
-              styles.progressBarTrack,
-              theme.style === 'wood' && { backgroundColor: '#23140C' },
-              theme.style === 'gold' && { backgroundColor: '#251912' },
-            ]}>
-              <View style={[
-                styles.progressBarFill,
-                { width: iqProgress },
-                theme.style === 'wood' && { backgroundColor: '#CD853F' },
-                theme.style === 'neon' && { backgroundColor: '#00FFFF' },
-                theme.style === 'gold' && { backgroundColor: '#D4AC0D' },
-              ]} />
+            {/* Right side: Stats & Progress */}
+            <View style={styles.hudWoodStatsCol}>
+              <View style={styles.hudWoodRow}>
+                <Text style={styles.hudWoodText}>
+                  <Text style={{fontWeight: '700'}}>IQ: </Text>
+                  <Text style={{fontWeight: '900', color: '#8B4513'}}>{iq}</Text>
+                </Text>
+                <Text style={styles.hudWoodLevelText}>LEVEL {g.level + 1}</Text>
+              </View>
+              
+              <View style={styles.hudWoodRow}>
+                <View style={{flexDirection: 'row', alignItems: 'baseline'}}>
+                  <Text style={styles.hudWoodScoreLabel}>SCORE: </Text>
+                  <Text style={styles.hudWoodScoreVal}>{g.score}</Text>
+                </View>
+              </View>
+              
+              <View style={{flexDirection: 'row', alignItems: 'center', marginTop: 4}}>
+                <View style={styles.hudWoodProgressTrack}>
+                  <View style={[styles.hudWoodProgressFill, { width: iqProgress }]} />
+                </View>
+                <Text style={styles.hudWoodProgressPercent}>{parseInt(iqProgress) || 0}%</Text>
+              </View>
             </View>
           </View>
         </View>
+      ) : (
+        <View style={[
+          styles.hud,
+          theme.style === 'neon' && styles.hudNeon,
+          theme.style === 'gold' && styles.hudGold,
+        ]}>
+          {/* Left Side: Pause Button */}
+          <TouchableOpacity onPress={togglePause} style={styles.pauseBtn}>
+            <Text style={[styles.pauseIcon, { color: theme.uiText || '#fff' }]}>
+              {isPaused ? '▶' : '⏸'}
+            </Text>
+          </TouchableOpacity>
 
-        {/* Right Side: Score, LV & Lines */}
-        <View style={styles.hudRightContainer}>
-          <Text style={[styles.scoreTextNew, { color: theme.uiText || '#fff' }]}>
-            {g.score}
-          </Text>
-          <View style={styles.levelLineBox}>
-            <Text style={[styles.hudLabelNew, { color: theme.style === 'wood' ? '#A9DFBF' : theme.uiText ? `${theme.uiText}80` : 'rgba(255,255,255,0.45)' }]}>LV {g.level + 1}</Text>
-            <Text style={[styles.hudLabelNew, { color: theme.style === 'wood' ? '#A9DFBF' : theme.uiText ? `${theme.uiText}80` : 'rgba(255,255,255,0.45)' }]}>{g.lines}L</Text>
+          {/* Central HUD Card: IQ & Avatar */}
+          <View style={[
+            styles.iqCard,
+            theme.style === 'neon' && styles.iqCardNeon,
+            theme.style === 'gold' && styles.iqCardGold,
+          ]}>
+            {/* Avatar Container */}
+            <View style={[
+              styles.avatarContainer,
+              theme.style === 'neon' && styles.avatarNeon,
+              theme.style === 'gold' && styles.avatarGold,
+            ]}>
+              <Text style={styles.avatarEmoji}>👴</Text>
+            </View>
+            
+            {/* IQ Text & Progress Bar */}
+            <View style={styles.iqProgressColumn}>
+              <Text style={[
+                styles.iqText, 
+                { color: theme.uiText || '#fff' },
+                theme.style === 'gold' && { color: '#F1C40F' }
+              ]}>
+                IQ : {iq}
+              </Text>
+              
+              {/* Progress Bar Track */}
+              <View style={[
+                styles.progressBarTrack,
+                theme.style === 'gold' && { backgroundColor: '#251912' },
+              ]}>
+                <View style={[
+                  styles.progressBarFill,
+                  { width: iqProgress },
+                  theme.style === 'neon' && { backgroundColor: '#00FFFF' },
+                  theme.style === 'gold' && { backgroundColor: '#D4AC0D' },
+                ]} />
+              </View>
+            </View>
+          </View>
+
+          {/* Right Side: Score, LV & Lines */}
+          <View style={styles.hudRightContainer}>
+            <Text style={[styles.scoreTextNew, { color: theme.uiText || '#fff' }]}>
+              {g.score}
+            </Text>
+            <View style={styles.levelLineBox}>
+              <Text style={[styles.hudLabelNew, { color: theme.uiText ? `${theme.uiText}80` : 'rgba(255,255,255,0.45)' }]}>LV {g.level + 1}</Text>
+              <Text style={[styles.hudLabelNew, { color: theme.uiText ? `${theme.uiText}80` : 'rgba(255,255,255,0.45)' }]}>{g.lines}L</Text>
+            </View>
           </View>
         </View>
-      </View>
+      )}
 
       {/* ── Board + Side panel ───────────────────────────────────────────── */}
       <View style={styles.gameRow} {...panResponder.panHandlers}>
@@ -627,8 +665,8 @@ export default function GameScreen({ navigation, route }) {
             styles.board,
             boardFrameStyle,
             {
-              width: BOARD_W + (theme.style === 'wood' ? 12 : theme.style === 'gold' ? 10 : theme.style === 'neon' ? 5 : 2),
-              height: BOARD_H + (theme.style === 'wood' ? 12 : theme.style === 'gold' ? 10 : theme.style === 'neon' ? 5 : 2),
+              width: BOARD_W + (theme.style === 'wood' ? 20 : theme.style === 'gold' ? 10 : theme.style === 'neon' ? 5 : 2),
+              height: BOARD_H + (theme.style === 'wood' ? 44 : theme.style === 'gold' ? 10 : theme.style === 'neon' ? 5 : 2),
               marginLeft: BOARD_ML,
             },
           ]}
@@ -643,6 +681,21 @@ export default function GameScreen({ navigation, route }) {
               ))}
             </View>
           ))}
+
+          {/* Bottom Info Bar inside board frame (Wood theme only) */}
+          {theme.style === 'wood' && (
+            <View style={styles.boardInfoBarWood}>
+              <View style={styles.boardInfoTagWood}>
+                <Text style={styles.boardInfoTextWood}>LINE: {g.lines}</Text>
+              </View>
+              <View style={styles.boardInfoTagWood}>
+                <Text style={styles.boardInfoTextWood}>COMBO: {g.combo > 1 ? `${g.combo}x` : '0x'}</Text>
+              </View>
+              <View style={styles.boardInfoTagWood}>
+                <Text style={styles.boardInfoTextWood}>LEVEL: {g.level + 1}</Text>
+              </View>
+            </View>
+          )}
         </View>
 
         {/* Side panel: next piece + stats */}
@@ -656,7 +709,7 @@ export default function GameScreen({ navigation, route }) {
             <Text style={[
               styles.sideLabelNew,
               { color: theme.uiText ? `${theme.uiText}aa` : 'rgba(255,255,255,0.5)' },
-              theme.style === 'wood' && { color: '#CD853F' },
+              theme.style === 'wood' && { color: '#3D2314' },
               theme.style === 'gold' && { color: '#CA9B1B' }
             ]}>NEXT</Text>
             <View style={[
@@ -695,13 +748,13 @@ export default function GameScreen({ navigation, route }) {
             <Text style={[
               styles.sideLabelNew,
               { color: theme.uiText ? `${theme.uiText}aa` : 'rgba(255,255,255,0.5)' },
-              theme.style === 'wood' && { color: '#CD853F' },
+              theme.style === 'wood' && { color: '#3D2314' },
               theme.style === 'gold' && { color: '#CA9B1B' }
             ]}>BEST</Text>
             <Text style={[
               styles.sideValNew,
               { color: theme.uiText || '#fff' },
-              theme.style === 'wood' && { color: '#F5DEB3' },
+              theme.style === 'wood' && { color: '#3D2314' },
               theme.style === 'gold' && { color: '#F1C40F' }
             ]}>{g.bestScore}</Text>
           </View>
@@ -716,12 +769,13 @@ export default function GameScreen({ navigation, route }) {
             <Text style={[
               styles.sideLabelNew,
               { color: theme.uiText ? `${theme.uiText}aa` : 'rgba(255,255,255,0.5)' },
-              theme.style === 'wood' && { color: '#CD853F' },
+              theme.style === 'wood' && { color: '#3D2314' },
               theme.style === 'gold' && { color: '#CA9B1B' }
             ]}>COMBO</Text>
             <Text style={[
               styles.sideValNew,
               { color: theme.style === 'wood' ? '#E59866' : theme.style === 'gold' ? '#F39C12' : '#FF00FF' },
+              theme.style === 'wood' && g.combo > 1 && { color: '#A0522D' },
               g.combo > 1 ? {} : { color: 'rgba(255,255,255,0.3)' }
             ]}>
               {g.combo > 1 ? `×${g.combo}` : '—'}
@@ -730,41 +784,50 @@ export default function GameScreen({ navigation, route }) {
         </View>
       </View>
 
-      {/* ── Gesture Legend ──────────────────────────────────────────────── */}
-      <View style={[
-        styles.legendContainer, 
-        { paddingBottom: Math.max(insets.bottom, 12) },
-        theme.style === 'wood' && styles.legendWood,
-        theme.style === 'neon' && styles.legendNeon,
-        theme.style === 'gold' && styles.legendGold,
-      ]}>
-        <Text style={[
-          styles.legendText,
-          theme.style === 'wood' && { color: '#F5DEB3' },
-          theme.style === 'neon' && { color: '#00FFFF' },
-          theme.style === 'gold' && { color: '#F1C40F' },
-        ]}>
-          ◀ Swipe Left / Right to Move ▶
-        </Text>
-        <View style={styles.legendRow}>
-          <Text style={[
-            styles.legendSubText,
-            theme.style === 'wood' && { color: '#CD853F' },
-            theme.style === 'neon' && { color: '#FF00FF' },
-            theme.style === 'gold' && { color: '#E59866' },
-          ]}>Tap to Rotate</Text>
-          <Text style={[
-            styles.legendDot,
-            theme.style === 'wood' && { color: '#5C4033' },
-            theme.style === 'neon' && { color: 'rgba(0, 255, 255, 0.3)' },
-            theme.style === 'gold' && { color: '#D4AC0D' },
-          ]}>•</Text>
-          <Text style={[
-            styles.legendSubText,
-            theme.style === 'wood' && { color: '#CD853F' },
-            theme.style === 'neon' && { color: '#FF00FF' },
-            theme.style === 'gold' && { color: '#E59866' },
-          ]}>Flick Down to Drop</Text>
+      {/* ── Bottom Circular Control Buttons ── */}
+      <View style={[styles.controlRow, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+        <View style={styles.controlBtnWrapper}>
+          <TouchableOpacity
+            style={[styles.controlBtn, theme.style === 'wood' && styles.controlBtnWood, theme.style === 'neon' && styles.controlBtnNeon, theme.style === 'gold' && styles.controlBtnGold]}
+            onPress={() => L.current.rotate()}
+            activeOpacity={0.75}
+          >
+            <Text style={[styles.controlBtnIcon, theme.style === 'wood' && { color: '#3D2314' }, theme.style === 'neon' && { color: '#00FFFF' }, theme.style === 'gold' && { color: '#CA9B1B' }]}>↻</Text>
+          </TouchableOpacity>
+          <Text style={[styles.controlBtnLabel, theme.style === 'wood' && { color: '#F5DEB3' }, theme.style === 'neon' && { color: '#00FFFF' }, theme.style === 'gold' && { color: '#D4AC0D' }]}>ROTATE</Text>
+        </View>
+
+        <View style={styles.controlBtnWrapper}>
+          <TouchableOpacity
+            style={[styles.controlBtn, theme.style === 'wood' && styles.controlBtnWood, theme.style === 'neon' && styles.controlBtnNeon, theme.style === 'gold' && styles.controlBtnGold]}
+            onPress={() => L.current.hardDrop()}
+            activeOpacity={0.75}
+          >
+            <Text style={[styles.controlBtnIcon, theme.style === 'wood' && { color: '#3D2314' }, theme.style === 'neon' && { color: '#00FFFF' }, theme.style === 'gold' && { color: '#CA9B1B' }]}>⬜</Text>
+          </TouchableOpacity>
+          <Text style={[styles.controlBtnLabel, theme.style === 'wood' && { color: '#F5DEB3' }, theme.style === 'neon' && { color: '#00FFFF' }, theme.style === 'gold' && { color: '#D4AC0D' }]}>DROP</Text>
+        </View>
+
+        <View style={styles.controlBtnWrapper}>
+          <TouchableOpacity
+            style={[styles.controlBtn, theme.style === 'wood' && styles.controlBtnWood, theme.style === 'neon' && styles.controlBtnNeon, theme.style === 'gold' && styles.controlBtnGold]}
+            onPress={() => L.current.softDrop()}
+            activeOpacity={0.75}
+          >
+            <Text style={[styles.controlBtnIcon, theme.style === 'wood' && { color: '#3D2314' }, theme.style === 'neon' && { color: '#00FFFF' }, theme.style === 'gold' && { color: '#CA9B1B' }]}>⤓</Text>
+          </TouchableOpacity>
+          <Text style={[styles.controlBtnLabel, theme.style === 'wood' && { color: '#F5DEB3' }, theme.style === 'neon' && { color: '#00FFFF' }, theme.style === 'gold' && { color: '#D4AC0D' }]}>HOLD</Text>
+        </View>
+
+        <View style={styles.controlBtnWrapper}>
+          <TouchableOpacity
+            style={[styles.controlBtn, theme.style === 'wood' && styles.controlBtnWood, theme.style === 'neon' && styles.controlBtnNeon, theme.style === 'gold' && styles.controlBtnGold]}
+            onPress={togglePause}
+            activeOpacity={0.75}
+          >
+            <Text style={[styles.controlBtnIcon, theme.style === 'wood' && { color: '#3D2314' }, theme.style === 'neon' && { color: '#00FFFF' }, theme.style === 'gold' && { color: '#CA9B1B' }]}>⚙</Text>
+          </TouchableOpacity>
+          <Text style={[styles.controlBtnLabel, theme.style === 'wood' && { color: '#F5DEB3' }, theme.style === 'neon' && { color: '#00FFFF' }, theme.style === 'gold' && { color: '#D4AC0D' }]}>MENU</Text>
         </View>
       </View>
 
@@ -1081,12 +1144,12 @@ const styles = StyleSheet.create({
     minWidth: 62,
   },
   sideCardWood: {
-    backgroundColor: '#3D2314',
-    borderWidth: 2,
-    borderColor: '#5C4033',
+    backgroundColor: '#F5DEB3', // light wood
+    borderWidth: 2.5,
+    borderColor: '#5C4033', // dark wood border
     borderRadius: 12,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.4,
     shadowRadius: 3,
     elevation: 3,
@@ -1160,5 +1223,220 @@ const styles = StyleSheet.create({
     backgroundColor: '#251912',
     borderColor: '#D4AC0D',
     borderWidth: 2,
+  },
+
+  // Premium Store-Screenshot exact styling rules
+  gameTitle: {
+    fontSize: 22,
+    fontWeight: '950',
+    textAlign: 'center',
+    marginTop: 8,
+    marginBottom: 4,
+    letterSpacing: 3,
+    color: '#fff',
+  },
+  gameTitleWood: {
+    color: '#F5DEB3',
+    textShadowColor: 'rgba(0,0,0,0.8)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
+  },
+
+  // Wood HUD Card
+  hudWoodContainer: {
+    paddingHorizontal: 12,
+    marginBottom: 10,
+  },
+  hudWoodCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F5DEB3', // Light birch wood background
+    borderWidth: 3,
+    borderColor: '#5C4033', // Dark wood frame
+    borderRadius: 18,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 5,
+    elevation: 5,
+  },
+  hudWoodAvatarCol: {
+    alignItems: 'center',
+    marginRight: 10,
+    width: 60,
+  },
+  hudWoodAvatarCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#EEDC82',
+    borderWidth: 2.5,
+    borderColor: '#5C4033',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  hudWoodAvatarEmoji: {
+    fontSize: 24,
+  },
+  hudWoodAvatarBanner: {
+    backgroundColor: '#5C4033',
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    marginTop: 3,
+    width: '100%',
+    alignItems: 'center',
+  },
+  hudWoodAvatarName: {
+    fontSize: 8,
+    fontWeight: 'bold',
+    color: '#F5DEB3',
+  },
+  hudWoodStatsCol: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  hudWoodRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 1,
+  },
+  hudWoodText: {
+    fontSize: 13,
+    color: '#3D2314',
+  },
+  hudWoodLevelText: {
+    fontSize: 11,
+    fontWeight: 'bold',
+    color: '#8B4513',
+  },
+  hudWoodScoreLabel: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: '#8B4513',
+  },
+  hudWoodScoreVal: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#3D2314',
+  },
+  hudWoodProgressTrack: {
+    flex: 1,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#D2B48C', // recessed brown progress track
+    borderWidth: 1,
+    borderColor: '#C49A6C',
+    overflow: 'hidden',
+    marginRight: 6,
+  },
+  hudWoodProgressFill: {
+    height: '100%',
+    borderRadius: 4,
+    backgroundColor: '#FFA500', // Gold/orange progress fill
+  },
+  hudWoodProgressPercent: {
+    fontSize: 9,
+    fontWeight: 'bold',
+    color: '#3D2314',
+    width: 24,
+    textAlign: 'right',
+  },
+
+  // Bottom info bar inside board frame
+  boardInfoBarWood: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    backgroundColor: '#3D2314', // dark wood bar
+    height: 36,
+    borderTopWidth: 2.5,
+    borderTopColor: '#5C4033',
+    borderBottomLeftRadius: 6,
+    borderBottomRightRadius: 6,
+  },
+  boardInfoTagWood: {
+    backgroundColor: '#1E1008',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#5C4033',
+  },
+  boardInfoTextWood: {
+    color: '#F5DEB3',
+    fontSize: 9,
+    fontWeight: '900',
+  },
+
+  // Bottom Controls
+  controlRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    marginHorizontal: 12,
+    marginTop: 12,
+  },
+  controlBtnWrapper: {
+    alignItems: 'center',
+  },
+  controlBtn: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.15)',
+  },
+  controlBtnIcon: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  controlBtnLabel: {
+    fontSize: 9,
+    fontWeight: 'bold',
+    marginTop: 4,
+    color: 'rgba(255,255,255,0.5)',
+  },
+  controlBtnWood: {
+    backgroundColor: '#F5DEB3', // Light wood button
+    borderWidth: 3,
+    borderColor: '#5C4033', // Dark wood border
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.4,
+    shadowRadius: 3,
+    elevation: 4,
+  },
+  controlBtnNeon: {
+    backgroundColor: '#05050C',
+    borderColor: '#00FFFF',
+    borderWidth: 2,
+    shadowColor: '#00FFFF',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  controlBtnGold: {
+    backgroundColor: '#CA9B1B',
+    borderColor: '#D4AC0D',
+    borderWidth: 2,
+    shadowColor: '#D4AC0D',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.4,
+    shadowRadius: 3,
+    elevation: 4,
   },
 });
