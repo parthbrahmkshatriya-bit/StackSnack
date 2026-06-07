@@ -282,7 +282,7 @@ export default function ShopScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1A1A2E',
+    backgroundColor: '#180B05',
   },
   header: {
     flexDirection: 'row',

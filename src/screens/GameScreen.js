@@ -541,7 +541,7 @@ export default function GameScreen({ navigation, route }) {
       style={[
         styles.container,
         {
-          backgroundColor: theme.background || '#1A1A2E',
+          backgroundColor: theme.background || '#180B05',
           paddingTop: insets.top,
         },
       ]}
