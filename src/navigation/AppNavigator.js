@@ -18,7 +18,7 @@ export default function AppNavigator() {
         screenOptions={{
           headerShown: false,
           animationEnabled: false, // Instant transitions for fast retry loop
-          cardStyle: { backgroundColor: '#1A1A2E' },
+          cardStyle: { backgroundColor: '#180B05' },
         }}
       >
         <Stack.Screen name="Splash" component={SplashScreen} />
