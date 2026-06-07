@@ -470,7 +470,26 @@ export default function GameScreen({ navigation, route }) {
       for (let c = 0; c < COLS; c++) {
         display[r][c] = { color: '#FFFFFF', ghost: false };
       }
-    });  const boardFrameStyle = useMemo(() => {
+        });
+
+    // Next piece 4×4 preview grid
+    const mini = Array.from({ length: 4 }, () => Array(4).fill(null));
+    nxt.cells.forEach(([cx, cy]) => {
+      if (cy < 4 && cx < 4) mini[cy][cx] = nxt.color;
+    });
+
+    return { displayBoard: display, nxtDisplay: mini };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tick]); // tick is the gate — game state is in refs, re-computed on each tick
+
+  const g = G.current;
+  const MINI = 14; // mini-cell size in next-piece preview
+
+  const iq = 80 + Math.floor(g.score / 150);
+  const scoreInCurrentTier = g.score % 150;
+  const iqProgress = `${Math.min(100, Math.max(0, (scoreInCurrentTier / 150) * 100))}%`;
+
+  const boardFrameStyle = useMemo(() => {
     if (theme.style === 'wood') {
       return {
         borderWidth: 10,
