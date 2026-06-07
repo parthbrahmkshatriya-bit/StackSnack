@@ -13,7 +13,7 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.stacksnap.game",
+      "bundleIdentifier": "com.shreejiinfosoft.stacksnap",
       "buildNumber": "1",
       "infoPlist": {
         "SKAdNetworkItems": [
@@ -32,7 +32,7 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#180B05"
       },
-      "package": "com.stacksnap.game",
+      "package": "com.shreejiinfosoft.stacksnap",
       "versionCode": 1,
       "permissions": []
     },
