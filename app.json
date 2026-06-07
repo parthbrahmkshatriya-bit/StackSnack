@@ -2,7 +2,7 @@
   "expo": {
     "name": "Stack & Snap",
     "slug": "stacksnap",
-    "version": "5.0",
+    "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -13,8 +13,8 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.stacksnap.app",
-      "buildNumber": "5",
+      "bundleIdentifier": "com.stacksnap.game",
+      "buildNumber": "1",
       "infoPlist": {
         "SKAdNetworkItems": [
           {
@@ -32,8 +32,8 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#180B05"
       },
-      "package": "com.stacksnap.app",
-      "versionCode": 5,
+      "package": "com.stacksnap.game",
+      "versionCode": 1,
       "permissions": []
     },
     "plugins": [
